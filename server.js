@@ -93,7 +93,7 @@ app.put('/image', (req, res) => {
     const userFound = database.users.filter(user => user.id === id);
     if (userFound.length > 0) {
         userFound[0].entries++;
-        res.status(200).json(`User found! His current entries are ${userFound[0].entries}`);
+        res.status(200).json(userFound[0].entries);
     } else {
         res.status(404).json('Not found');
     }
