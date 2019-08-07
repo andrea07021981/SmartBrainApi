@@ -44,7 +44,7 @@ app.get('/', (req,res) => {
 app.post('/signin', (req, res) => {
     if (req.body.email === database.users[0].email && 
         req.body.password === database.users[0].password) {
-            res.json('success')
+            res.json(database.users[0])
     } else {
         res.status(400).json('Error loggin in')
     }
@@ -54,15 +54,25 @@ app.post('/signin', (req, res) => {
  app.post('/register', (req, res) => {
     //Desctructuring
     const { email, name, password } = req.body;
+    let min = 0;
+    let max = 100;
+    let id = (Math.floor(Math.random() * (+max - +min)) + +min).toString();
     database.users.push({
-        "id": "'129'",
+        "id": id,
         "name": name,
         "email": email,
         "password": password,
         "entries": 0,
         "joined": new Date()
     })
-    res.json(database.users[database.users.length - 1]);
+
+    let found = database.users.filter(user => user.id === id);
+
+    if (found.length > 0) {
+        res.json(found);
+    } else {
+        res.status(404).json('Not created');
+    }
  })
 
 //PROFILE
