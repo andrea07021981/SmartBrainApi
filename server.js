@@ -1,8 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
 
+//We need cors for security
+app.use(cors());
 /************************************************************
 //MPORTANT: WE MUST USE BODY PARSER EVERYTIME WE SEND JSON
 */
@@ -41,7 +44,7 @@ app.get('/', (req,res) => {
 app.post('/signin', (req, res) => {
     if (req.body.email === database.users[0].email && 
         req.body.password === database.users[0].password) {
-            res.json('Logged!!!')
+            res.json('success')
     } else {
         res.status(400).json('Error loggin in')
     }
