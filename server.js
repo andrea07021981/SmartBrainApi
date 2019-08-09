@@ -1,9 +1,27 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt-nodejs');//Password crypting
 const cors = require('cors');
+const knex = require('knex');//It's used for postgreesql connections (with npm install pg)
+
+
+const db = knex({
+    client: 'pg',
+    connection: {
+        host : '127.0.0.1',
+        user : 'afranco',
+        password : '',
+        database : 'smart-brain'
+    }
+});
+
+//Exemple of select
+// console.log(db.select('*').from('users').then(data => {
+//     console.log(data);
+// }));
 
 const app = express();
-
+  
 //We need cors for security
 app.use(cors());
 /************************************************************
@@ -14,89 +32,103 @@ app.use(bodyParser.json());
 //app.use(bodyParser.urlencoded({extended: false}))
 /************************************************************/
 
-
-//TEMP DATABASE
-const database = {
-    users: [
-        {
-            id: '123',
-            name: 'John',
-            email: 'john@gmail.com',
-            password: 'cookies',
-            entries: 0,
-            joined: new Date()
-        },
-        {
-            id: '234',
-            name: 'Sally',
-            email: 'sally@gmail.com',
-            password: 'bananas',
-            entries: 0,
-            joined: new Date()
-        }
-    ]
-}
 app.get('/', (req,res) => {
     res.send('Helloooooooooo')
 })
 
 //SIGNIN
 app.post('/signin', (req, res) => {
-    if (req.body.email === database.users[0].email && 
-        req.body.password === database.users[0].password) {
-            res.json(database.users[0])
-    } else {
-        res.status(400).json('Error loggin in')
-    }
+    const {email, password} = req.body;
+    
+    db
+        .select('email', 'hash')
+        .from('login')
+        .where({email})
+        .then(data => {
+            let isValid = bcrypt.compareSync(password, data[0].hash);
+            if (isValid) {
+                return db
+                    .select('*')
+                    .from('users')
+                    .where({email})
+                    .then(user => {
+                        res.json(user[0]);
+                    })
+                    .catch(err => res.status(400).json('Unable to get user'));
+            } else {
+                res.status(400).json('Wrong credentials')
+            }
+        })
+        .catch(err => res.status(400).json('Wrong credentials'));
 })
 
 //REGISTER
  app.post('/register', (req, res) => {
     //Desctructuring
     const { email, name, password } = req.body;
-    let min = 0;
-    let max = 100;
-    let id = (Math.floor(Math.random() * (+max - +min)) + +min).toString();
-    database.users.push({
-        "id": id,
-        "name": name,
-        "email": email,
-        "password": password,
-        "entries": 0,
-        "joined": new Date()
-    })
+    const hash = bcrypt.hashSync(password);
 
-    let found = database.users.filter(user => user.id === id);
-
-    if (found.length > 0) {
-        res.json(found);
-    } else {
-        res.status(404).json('Not created');
-    }
+    //We are using TRANSACTIONS in order to avoid partial inserts
+    db.transaction(trx => {
+        trx 
+            .insert({
+                hash: hash,
+                email: email
+            })
+            .into('login')
+            .returning('email')
+            .then(loginemail => {
+                return trx
+                    .returning('*')
+                    .insert({
+                        name: name,
+                        email: loginemail[0],
+                        joined: new Date()
+                    })
+                    .into('users')
+                    .then(user => {
+                        if (user.length > 0) {
+                            res.json(user[0]);
+                        } else {
+                            throw('');
+                        }
+                    })
+            })
+            .then(trx.commit)
+            .catch(trx.rollback)
+        })
+        .catch(err => res.status(400).send('Unable to register'));
  })
 
 //PROFILE
 app.get('/profile/:id', (req, res) => {
     //Destructuring
     var { id } = req.params;
-    const userFound = database.users.filter(user => user.id === id);
-    if (userFound.length > 0) {
-        res.status(200).json(`User found! It is ${userFound[0].name}`);
-    } else {
-        res.status(404).json('Not found');
-    }
+    db
+        .select('*')
+        .from('users')
+        .where({id})//ES6 allows us to avoid repeating variables if they have the same name
+        .then(user => {
+            //We must check because in js Boolean([]) return true
+            if (user.length) {
+                res.send(user[0]);
+            } else {
+                throw("");
+            }
+        })
+        .catch(err => res.status(400).send('Error getting user'));
 })
 
 //IMAGE
 app.put('/image', (req, res) => {
     var { id } = req.body;
-    const userFound = database.users.filter(user => user.id === id);
-    if (userFound.length > 0) {
-        userFound[0].entries++;
-        res.status(200).json(userFound[0].entries);
-    } else {
-        res.status(404).json('Not found');
-    }
+    
+    db('users')
+        .where({id})
+        .increment('entries', 1) //We can use increment in this case instead of update
+        .returning('entries')
+        .then(entries => res.json(entries[0]))
+        .catch(err => send.status(400).send('Unable to get entries'));
 })
 
 //----------------------------------------------------------------------
