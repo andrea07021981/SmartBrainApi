@@ -62,8 +62,19 @@ app.post('/imageurl', (req, res) => { image.handleApiCall(req, res) });
 
 
 //----------------------------------------------------------------------
-app.listen(3000, ()=> {
-    console.log('App is running on port 3000');
+//Add enviromental varialble port
+console.log(process.env);
+
+/*IMPORTANT: BEFORE RUNNING THE SERVER, WE MUST SET 
+THE ENVIROMENTAL VARIALE
+ON TERMINAL IN SERVER DIRECTORY:
+BASH
+PORT=3000 NODE SERVER.JS
+*/
+
+const PORT = process.env.PORT;
+app.listen(PORT, ()=> {
+    console.log(`App is running on port ${PORT}`);
 })
 
 /* STEPS
