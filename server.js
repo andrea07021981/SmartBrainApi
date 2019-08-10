@@ -4,14 +4,18 @@ const bcrypt = require('bcrypt-nodejs');//Password crypting
 const cors = require('cors');
 const knex = require('knex');//It's used for postgreesql connections (with npm install pg)
 
+const register = require('./controllers/register');
+const signin = require('./controllers/signin')
+const profile = require('./controllers/profile');
+const image = require('./controllers/image');
 
 const db = knex({
     client: 'pg',
     connection: {
         host : '127.0.0.1',
-        user : 'afranco',
+        user : 'andreafranco',
         password : '',
-        database : 'smart-brain'
+        database : 'smart-brain-db'
     }
 });
 
@@ -37,101 +41,16 @@ app.get('/', (req,res) => {
 })
 
 //SIGNIN
-app.post('/signin', (req, res) => {
-    const {email, password} = req.body;
-    
-    db
-        .select('email', 'hash')
-        .from('login')
-        .where({email})
-        .then(data => {
-            let isValid = bcrypt.compareSync(password, data[0].hash);
-            console.log(isValid);
-            
-            if (isValid) {
-                return db
-                    .select('*')
-                    .from('users')
-                    .where({email})
-                    .then(user => {
-                        res.json(user[0]);
-                    })
-                    .catch(err => res.status(400).json('Unable to get user'));
-            } else {
-                res.status(400).json('Wrong credentials')
-            }
-        })
-        .catch(err => res.status(400).json('Wrong credentials'));
-})
+app.post('/signin',(req, res) => { signin.handleSigninPost(req, res, db, bcrypt) });
 
 //REGISTER
- app.post('/register', (req, res) => {
-    //Desctructuring
-    const { email, name, password } = req.body;
-    const hash = bcrypt.hashSync(password);
-
-    //We are using TRANSACTIONS in order to avoid partial inserts
-    db.transaction(trx => {
-        trx 
-            .insert({
-                hash: hash,
-                email: email
-            })
-            .into('login')
-            .returning('email')
-            .then(loginemail => {
-                return trx
-                    .returning('*')
-                    .insert({
-                        name: name,
-                        email: loginemail[0],
-                        joined: new Date()
-                    })
-                    .into('users')
-                    .then(user => {
-                        if (user.length > 0) {
-                            res.json(user[0]);
-                        } else {
-                            throw('');
-                        }
-                    })
-            })
-            .then(trx.commit)
-            .catch(trx.rollback)
-        })
-        .catch(err => res.status(400).send('Unable to register'));
- })
+ app.post('/register', (req, res) => { register.handleRegisterPost(req, res, db, bcrypt) });
 
 //PROFILE
-app.get('/profile/:id', (req, res) => {
-    //Destructuring
-    var { id } = req.params;
-    db
-        .select('*')
-        .from('users')
-        .where({id})//ES6 allows us to avoid repeating variables if they have the same name
-        .then(user => {
-            //We must check because in js Boolean([]) return true
-            if (user.length) {
-                res.send(user[0]);
-            } else {
-                throw("");
-            }
-        })
-        .catch(err => res.status(400).send('Error getting user'));
-})
+app.get('/profile/:id', (req, res) =>{ profile.handleProfileGet(req, res, db) });
 
 //IMAGE
-app.put('/image', (req, res) => {
-    var { id } = req.body;
-    
-    db('users')
-        .where({id})
-        .increment('entries', 1) //We can use increment in this case instead of update
-        .returning('entries')
-        .then(entries => res.json(entries[0]))
-        .catch(err => send.status(400).send('Unable to get entries'));
-})
+app.put('/image', (req, res) => { image.handleImagePut(req, res, db) });
 
 //----------------------------------------------------------------------
 app.listen(3000, ()=> {
