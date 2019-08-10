@@ -57,6 +57,10 @@ app.get('/profile/:id', (req, res) =>{ profile.handleProfileGet(req, res, db) })
 //IMAGE
 app.put('/image', (req, res) => { image.handleImagePut(req, res, db) });
 
+//IMAGE PATH CLARIFAI
+app.post('/imageurl', (req, res) => { image.handleApiCall(req, res) });
+
+
 //----------------------------------------------------------------------
 app.listen(3000, ()=> {
     console.log('App is running on port 3000');

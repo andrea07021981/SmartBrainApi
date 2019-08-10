@@ -1,4 +1,18 @@
-const handleImagePut = (req, res) => {
+const Clarifai = require('clarifai')
+const { clarifaikey }= require('../constants/clarifaikey')
+
+//IMPORTANT FOR CLARIFAI
+const app = new Clarifai.App({
+    apiKey: clarifaikey.key
+});
+
+const handleApiCall = (req, res) => {
+    app.models
+        .predict(Clarifai.FACE_DETECT_MODEL, req.body.input)
+        .then(data => res.json(data))
+        .catch(err => res.status(400).json(err));
+}
+const handleImagePut = (req, res, db) => {
     var { id } = req.body;
     
     db('users')
@@ -10,5 +24,6 @@ const handleImagePut = (req, res) => {
 }
 
 module.exports = {
-    handleImagePut
+    handleImagePut,
+    handleApiCall
 }
