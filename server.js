@@ -41,6 +41,11 @@ app.get('/', (req,res) => {
 })
 
 //SIGNIN
+//WE could also use composing for functions like :
+//signin.handleSigninPost(db, bcrypt)(req, res);
+//And in signin 
+//const handleSigninPost = (db, bcrypt)  => (req, res) => .....
+
 app.post('/signin',(req, res) => { signin.handleSigninPost(req, res, db, bcrypt) });
 
 //REGISTER
