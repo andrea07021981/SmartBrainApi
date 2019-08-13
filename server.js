@@ -73,7 +73,7 @@ PORT=3000 NODE SERVER.JS
 */
 
 const PORT = process.env.PORT;
-app.listen(PORT, ()=> {
+app.listen(PORT || 3000, ()=> {
     console.log(`App is running on port ${PORT}`);
 })
 
